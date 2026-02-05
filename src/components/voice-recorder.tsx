@@ -1,25 +1,31 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Mic, Square, Play, Pause, RotateCcw, Upload } from 'lucide-react'
+import { Mic, Square, Play, Pause, RotateCcw, Upload, Trash2, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface VoiceRecorderProps {
     onRecordingComplete: (audioBlob: Blob) => void
+    onNext: () => void
     t: {
         start: string,
         stop: string,
         play: string,
         reset: string,
-        upload: string
+        upload: string,
+        next: string,
+        delete: string
     }
 }
 
-export default function VoiceRecorder({ onRecordingComplete, t }: VoiceRecorderProps) {
+export default function VoiceRecorder({ onRecordingComplete, onNext, t }: VoiceRecorderProps) {
     const [isRecording, setIsRecording] = useState(false)
     const [audioURL, setAudioURL] = useState<string | null>(null)
     const [elapsedTime, setElapsedTime] = useState(0)
     const [isPlaying, setIsPlaying] = useState(false)
+    const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
+    const [audioDuration, setAudioDuration] = useState(0)
+    const [currentTime, setCurrentTime] = useState(0)
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const audioChunksRef = useRef<Blob[]>([])
@@ -62,11 +68,14 @@ export default function VoiceRecorder({ onRecordingComplete, t }: VoiceRecorderP
                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
                 const url = URL.createObjectURL(audioBlob)
                 setAudioURL(url)
-                onRecordingComplete(audioBlob)
+                setAudioURL(url)
+                setAudioBlob(audioBlob)
 
                 // Cleanup Audio Context
-                if (audioContextRef.current) {
-                    audioContextRef.current.close()
+                // Cleanup Audio Context
+                if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                    audioContextRef.current.close().catch(console.error)
+                    audioContextRef.current = null
                 }
                 if (animationFrameRef.current) {
                     cancelAnimationFrame(animationFrameRef.current)
@@ -144,25 +153,70 @@ export default function VoiceRecorder({ onRecordingComplete, t }: VoiceRecorderP
             audioRef.current.currentTime = 0
             setIsPlaying(false)
         }
+        // Cleanup animation on URL change
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current)
+            animationFrameRef.current = null
+        }
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            audioContextRef.current.close()
+            audioContextRef.current = null
+        }
+        setCurrentTime(0)
+        setAudioDuration(0)
     }, [audioURL])
 
-    const handlePlayPause = () => {
+    const handlePlayPause = async () => {
         if (!audioRef.current || !audioURL) return
 
         if (isPlaying) {
             audioRef.current.pause()
             setIsPlaying(false)
+            // Stop playback visualization
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current)
+                animationFrameRef.current = null
+            }
+            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close().catch(console.error)
+                audioContextRef.current = null
+            }
         } else {
-            const playPromise = audioRef.current.play()
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(() => {
-                        setIsPlaying(true)
-                    })
-                    .catch(error => {
-                        console.error("Playback failed:", error)
-                        setIsPlaying(false)
-                    })
+            // Setup audio context for playback visualization
+            try {
+                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+                const analyser = audioContext.createAnalyser()
+                const source = audioContext.createMediaElementSource(audioRef.current)
+                source.connect(analyser)
+                analyser.connect(audioContext.destination)
+                analyser.fftSize = 256
+
+                audioContextRef.current = audioContext
+                analyserRef.current = analyser
+                dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount)
+
+                const playPromise = audioRef.current.play()
+                if (playPromise !== undefined) {
+                    playPromise
+                        .then(() => {
+                            setIsPlaying(true)
+                            drawVisualizer()
+                        })
+                        .catch(error => {
+                            console.error("Playback failed:", error)
+                            setIsPlaying(false)
+                            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                                audioContextRef.current.close().catch(console.error)
+                                audioContextRef.current = null
+                            }
+                        })
+                }
+            } catch (err) {
+                console.error("Error setting up playback visualization:", err)
+                // Fallback: play without visualization
+                audioRef.current.play()
+                    .then(() => setIsPlaying(true))
+                    .catch(error => console.error("Playback failed:", error))
             }
         }
     }
@@ -175,6 +229,38 @@ export default function VoiceRecorder({ onRecordingComplete, t }: VoiceRecorderP
         setAudioURL(null)
         setElapsedTime(0)
         setIsPlaying(false)
+        setIsPlaying(false)
+        setAudioBlob(null)
+    }
+
+    const handleNext = () => {
+        if (audioBlob) {
+            onRecordingComplete(audioBlob)
+            onNext()
+            // We need to reset, but check if onNext might unmount us or change state.
+            // Assuming we stay mounted or parent handles logic.
+            handleReset()
+        }
+    }
+
+    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const time = parseFloat(e.target.value)
+        setCurrentTime(time)
+        if (audioRef.current) {
+            audioRef.current.currentTime = time
+        }
+    }
+
+    const handleTimeUpdate = () => {
+        if (audioRef.current) {
+            setCurrentTime(audioRef.current.currentTime)
+        }
+    }
+
+    const handleLoadedMetadata = () => {
+        if (audioRef.current) {
+            setAudioDuration(audioRef.current.duration)
+        }
     }
 
     const formatTime = (seconds: number) => {
@@ -198,10 +284,40 @@ export default function VoiceRecorder({ onRecordingComplete, t }: VoiceRecorderP
 
             <audio
                 ref={audioRef}
-                src={audioURL || ''}
-                onEnded={() => setIsPlaying(false)}
+                src={audioURL || undefined}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
+                onEnded={() => {
+                    setIsPlaying(false)
+                    if (animationFrameRef.current) {
+                        cancelAnimationFrame(animationFrameRef.current)
+                        animationFrameRef.current = null
+                    }
+                    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                        audioContextRef.current.close().catch(console.error)
+                        audioContextRef.current = null
+                    }
+                }}
                 className="hidden"
             />
+
+            {audioURL && (
+                <div className="w-full mt-4 space-y-2">
+                    <input
+                        type="range"
+                        min="0"
+                        max={audioDuration || 0}
+                        step="0.1"
+                        value={currentTime}
+                        onChange={handleSeek}
+                        className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-indigo-500 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
+                    />
+                    <div className="flex justify-between text-xs text-gray-400">
+                        <span>{formatTime(Math.floor(currentTime))}</span>
+                        <span>{formatTime(Math.floor(audioDuration))}</span>
+                    </div>
+                </div>
+            )}
 
             <div className="flex gap-4">
                 {!isRecording && !audioURL && (
@@ -224,7 +340,7 @@ export default function VoiceRecorder({ onRecordingComplete, t }: VoiceRecorderP
 
                 {audioURL && (
                     <>
-                        <button onClick={handlePlayPause} className="p-3 rounded-full bg-indigo-600 hover:bg-indigo-500 transition-all">
+                        <button onClick={handlePlayPause} className="p-3 rounded-full bg-indigo-600 hover:bg-indigo-500 transition-all" title={t.play}>
                             {isPlaying ? (
                                 <Pause className="w-5 h-5 text-white fill-white" />
                             ) : (
@@ -232,8 +348,12 @@ export default function VoiceRecorder({ onRecordingComplete, t }: VoiceRecorderP
                             )}
                         </button>
 
-                        <button onClick={handleReset} className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-all">
-                            <RotateCcw className="w-5 h-5 text-white" />
+                        <button onClick={handleReset} className="p-3 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-all border border-red-500/30" title={t.delete}>
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+
+                        <button onClick={handleNext} className="p-3 rounded-full bg-indigo-600 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20" title={t.next}>
+                            <ArrowRight className="w-5 h-5 text-white" />
                         </button>
                     </>
                 )}

@@ -15,11 +15,13 @@ export default function DashboardPage() {
         welcome: isAr ? 'أهلاً بك' : 'Welcome back',
         points: isAr ? 'نقاطك' : 'Your Points',
         tasks: isAr ? 'المتوفرة' : 'Available Scripts',
-        start: isAr ? 'ابدأ التسجيل' : 'Start Recording',
+        start: isAr ? 'تسجيل' : 'Record',
         stop: isAr ? 'إيقاف' : 'Stop',
-        play: isAr ? 'تشغيل' : 'Play',
+        play: isAr ? 'استماع' : 'Listen',
         reset: isAr ? 'إعادة' : 'Reset',
         upload: isAr ? 'رفع' : 'Upload',
+        next: isAr ? 'التالي' : 'Next',
+        delete: isAr ? 'حذف' : 'Delete',
         logout: isAr ? 'تسجيل الخروج' : 'Logout',
     }
 
@@ -320,7 +322,8 @@ export default function DashboardPage() {
                 <div className="flex flex-col items-center justify-center">
                     <VoiceRecorder
                         onRecordingComplete={handleUpload}
-                        t={{ start: t.start, stop: t.stop, play: t.play, reset: t.reset, upload: t.upload }}
+                        onNext={handleNextScript}
+                        t={t}
                     />
                     {uploading && <p className="mt-4 text-indigo-400 animate-pulse">Uploading...</p>}
                 </div>

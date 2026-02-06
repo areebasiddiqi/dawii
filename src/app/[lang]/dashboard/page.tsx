@@ -85,15 +85,32 @@ export default function DashboardPage() {
                 setProfile(profileData as Profile)
             }
 
-            // Load all scripts
-            const { data: scriptsData } = await supabase
-                .from('scripts')
-                .select('*')
-                .order('id', { ascending: true })
+            // Load all scripts and assignments
+            const [scriptsRes, assignmentsRes] = await Promise.all([
+                supabase.from('scripts').select('*').order('id', { ascending: true }),
+                supabase.from('script_assignments').select('*')
+            ])
 
-            if (scriptsData && scriptsData.length > 0) {
-                setAllScripts(scriptsData)
-                setCurrentScript(scriptsData[0])
+            const allScriptsData = scriptsRes.data || []
+            const allAssignments = assignmentsRes.data || []
+
+            // Filter: Show scripts that are (1) assigned to me OR (2) unassigned
+            const filteredScripts = allScriptsData.filter((script: Script) => {
+                const scriptAssignments = allAssignments.filter((a: any) => a.script_id === script.id)
+
+                // If no assignments, show to everyone
+                if (scriptAssignments.length === 0) return true
+
+                // If assigned to me, show
+                return scriptAssignments.some((a: any) => a.user_id === user.id)
+            })
+
+            if (filteredScripts.length > 0) {
+                setAllScripts(filteredScripts)
+                setCurrentScript(filteredScripts[0])
+            } else {
+                setAllScripts([])
+                setCurrentScript(null)
             }
 
             setLoading(false)
@@ -139,7 +156,17 @@ export default function DashboardPage() {
             }
 
             // 1. Upload to Storage
-            const filename = `${user.id}/${Date.now()}.webm`
+            const now = new Date()
+            const ss = String(now.getSeconds()).padStart(2, '0')
+            const mm = String(now.getMinutes()).padStart(2, '0')
+            const hh = String(now.getHours()).padStart(2, '0')
+            const DD = String(now.getDate()).padStart(2, '0')
+            const MM = String(now.getMonth() + 1).padStart(2, '0')
+            const YYYY = now.getFullYear()
+            const name = (profile?.full_name || 'user').replace(/\s+/g, '_')
+
+            const filename = `${user.id}/${ss}_${mm}_${hh}_${DD}_${MM}_${YYYY}_${name}.webm`
+
             const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('recordings')
                 .upload(filename, audioBlob)
@@ -156,19 +183,17 @@ export default function DashboardPage() {
                 .from('recordings')
                 .getPublicUrl(filename)
 
-            // Calculate Points Logic
             let pointsEarned = 0
             let durationValid = true
 
             if (currentScript) {
                 // Word Count (approx)
-                const wordCount = (currentScript.content_en || '').split(/\s+/).length
+                const wordCount = (currentScript.content_ar || '').split(/\s+/).length
 
                 // Difficulty Multiplier
                 let multiplier = 1
                 const diff = (currentScript.difficulty || 'easy').toLowerCase()
                 if (diff === 'medium') multiplier = 1.5
-                if (diff === 'hard') multiplier = 2
 
                 // Duration Check (Audio Quality Proxy)
                 // Estimate: 2.5 words per second (150 wpm)
@@ -286,13 +311,13 @@ export default function DashboardPage() {
                 <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-900/50 to-purple-900/50 border border-white/10 backdrop-blur-xl">
                     <span className="text-xs font-semibold text-indigo-300 uppercase tracking-widest mb-4 block">Current Script</span>
                     <p className="text-2xl md:text-3xl leading-relaxed text-white font-serif">
-                        {currentScript ? (isAr ? currentScript.content_ar : currentScript.content_en) : 'Loading script...'}
+                        {currentScript ? currentScript.content_ar : 'Loading script...'}
                     </p>
                     {currentScript && (
                         <div className="mt-8 flex justify-between items-end">
                             <div className="flex gap-2">
                                 <span className="px-3 py-1 rounded-full bg-white/10 text-xs capitalize">{currentScript.difficulty}</span>
-                                <span className="px-3 py-1 rounded-full bg-white/10 text-xs">{isAr ? 'عربي' : 'English'}</span>
+                                <span className="px-3 py-1 rounded-full bg-white/10 text-xs">{isAr ? 'عربي' : 'Arabic'}</span>
                             </div>
 
                             <div className="flex gap-2">

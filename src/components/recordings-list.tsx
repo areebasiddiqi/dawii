@@ -67,6 +67,28 @@ export default function RecordingsList({ userId, lang }: RecordingsListProps) {
         )
     }
 
+    const parseFilenameInfo = (url: string) => {
+        try {
+            // Expected format: .../ss_mm_hh_DD_MM_YYYY_Name.webm
+            const filename = url.split('/').pop() || ''
+            const parts = filename.replace('.webm', '').split('_')
+
+            if (parts.length >= 7) {
+                // ss_mm_hh_DD_MM_YYYY_Name
+                const [ss, mm, hh, DD, MM, YYYY, ...nameParts] = parts
+                const name = nameParts.join(' ')
+                return {
+                    time: `${hh}:${mm}:${ss}`,
+                    date: `${DD}/${MM}/${YYYY}`,
+                    name: name
+                }
+            }
+            return null
+        } catch (e) {
+            return null
+        }
+    }
+
     return (
         <div className="mt-12">
             <h2 className="text-2xl font-bold text-white mb-6">{t.title}</h2>
@@ -77,26 +99,37 @@ export default function RecordingsList({ userId, lang }: RecordingsListProps) {
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {recordings.map((recording) => (
-                        <div
-                            key={recording.id}
-                            className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4 flex-1">
-                                    <div>
-                                        <p className="text-white font-medium">{formatDate(recording.created_at)}</p>
+                    {recordings.map((recording) => {
+                        const info = parseFilenameInfo(recording.audio_url)
+                        return (
+                            <div
+                                key={recording.id}
+                                className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                            >
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                        {info ? (
+                                            <div className="flex flex-col gap-1">
+                                                <p className="text-white font-mono font-medium">{info.time}</p>
+                                                <div className="flex gap-3 text-sm text-gray-400">
+                                                    <span>{info.date}</span>
+                                                    <span className="text-indigo-400">{info.name}</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-white font-medium">{formatDate(recording.created_at)}</p>
+                                        )}
                                     </div>
+                                    <audio controls src={recording.audio_url} className="h-10 w-full max-w-xs" />
                                 </div>
-                                <audio controls src={recording.audio_url} className="h-10 max-w-xs" />
+                                {recording.feedback && (
+                                    <div className="mt-3 pt-3 border-t border-white/10">
+                                        <p className="text-sm text-gray-400">{recording.feedback}</p>
+                                    </div>
+                                )}
                             </div>
-                            {recording.feedback && (
-                                <div className="mt-3 pt-3 border-t border-white/10">
-                                    <p className="text-sm text-gray-400">{recording.feedback}</p>
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
             )}
         </div>

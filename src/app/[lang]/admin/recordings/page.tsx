@@ -15,7 +15,7 @@ export default function AdminRecordings() {
         const fetchRecordings = async () => {
             const { data } = await supabase
                 .from('recordings')
-                .select('*, scripts(title)')
+                .select('*, scripts(title), user:profiles!user_id(full_name)')
                 .order('created_at', { ascending: false })
 
             if (data) setRecordings(data)
@@ -51,8 +51,9 @@ export default function AdminRecordings() {
                     <thead>
                         <tr className="border-b border-white/10 text-gray-400 bg-black/20">
                             <th className="p-4">ID</th>
+                            <th className="p-4">User</th>
                             <th className="p-4">Script</th>
-                            <th className="p-4">Date</th>
+                            <th className="p-4">Timestamp</th>
                             <th className="p-4">Audio Playback</th>
                             <th className="p-4 text-right">Actions</th>
                         </tr>
@@ -61,9 +62,10 @@ export default function AdminRecordings() {
                         {recordings.map(rec => (
                             <tr key={rec.id} className="hover:bg-white/5 transition-colors">
                                 <td className="p-4 text-gray-400">{rec.id}</td>
+                                <td className="p-4 text-indigo-400 font-medium">{rec.user?.full_name || 'Unknown User'}</td>
                                 <td className="p-4 text-white font-medium">{rec.scripts?.title || 'Unknown Script'}</td>
                                 <td className="p-4 text-gray-400">
-                                    {new Date(rec.created_at).toLocaleDateString()}
+                                    {new Date(rec.created_at).toLocaleString()}
                                 </td>
                                 <td className="p-4">
                                     <audio controls src={rec.audio_url} className="h-8 w-48 rounded" />

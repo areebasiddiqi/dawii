@@ -34,6 +34,7 @@ export default function DashboardPage() {
 
     interface Script {
         id: number
+        title: string
         content_en: string
         content_ar: string
         difficulty: string
@@ -47,6 +48,7 @@ export default function DashboardPage() {
     const [currentScript, setCurrentScript] = useState<Script | null>(null)
     const [allScripts, setAllScripts] = useState<Script[]>([])
     const [currentIndex, setCurrentIndex] = useState(0)
+    const [toast, setToast] = useState<{ show: boolean, message: string, type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'info' })
 
     useEffect(() => {
         async function loadUser() {
@@ -119,6 +121,11 @@ export default function DashboardPage() {
         loadUser()
     }, [lang, router])
 
+    const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setToast({ show: true, message, type })
+        setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000)
+    }
+
     const handleNextScript = () => {
         if (currentIndex < allScripts.length - 1) {
             const newIndex = currentIndex + 1
@@ -150,7 +157,7 @@ export default function DashboardPage() {
             // Get current user
             const { data: { user }, error: userError } = await supabase.auth.getUser()
             if (userError || !user) {
-                alert('Please log in to upload recordings')
+                showToast('Please log in to upload recordings', 'error')
                 setUploading(false)
                 return
             }
@@ -173,7 +180,7 @@ export default function DashboardPage() {
 
             if (uploadError) {
                 console.error('Upload error:', uploadError)
-                alert('Error uploading audio: ' + uploadError.message)
+                showToast('Error uploading audio: ' + uploadError.message, 'error')
                 setUploading(false)
                 return
             }
@@ -184,33 +191,15 @@ export default function DashboardPage() {
                 .getPublicUrl(filename)
 
             let pointsEarned = 0
-            let durationValid = true
 
             if (currentScript) {
-                // Word Count (approx)
-                const wordCount = (currentScript.content_ar || '').split(/\s+/).length
-
-                // Difficulty Multiplier
-                let multiplier = 1
-                const diff = (currentScript.difficulty || 'easy').toLowerCase()
-                if (diff === 'medium') multiplier = 1.5
-
-                // Duration Check (Audio Quality Proxy)
-                // Estimate: 2.5 words per second (150 wpm)
-                // We'll accept a generous range: 0.5x to 2.5x the estimated time
-                const estimatedSecs = wordCount / 2.5
+                // Get audio duration
                 const audioDuration = await getBlobDuration(audioBlob)
 
-                // If duration is too short (< 0.5x) or too long (> 2.5x), we consider it 'poor quality' or invalid
-                if (audioDuration < estimatedSecs * 0.5 || audioDuration > estimatedSecs * 2.5) {
-                    durationValid = false
-                } else {
-                    // Formula: Base 10 per word * Multiplier? No, that's too high. 
-                    // Let's say Base 1 point per word * Multiplier. 
-                    // Example: 50 words * 1.5 = 75 points.
-                    pointsEarned = Math.round(wordCount * multiplier)
-                }
+                // Points Formula: 1 point per 1 second
+                pointsEarned = Math.round(audioDuration)
             }
+
 
             // 3. Insert record in DB
             const { error: dbError } = await supabase
@@ -224,13 +213,13 @@ export default function DashboardPage() {
 
             if (dbError) {
                 console.error('Database error:', dbError)
-                alert('Error saving recording: ' + dbError.message)
+                showToast('Error saving recording: ' + dbError.message, 'error')
                 setUploading(false)
                 return
             }
 
-            // 4. Award points if valid
-            if (pointsEarned > 0 && durationValid) {
+            // 4. Award points
+            if (pointsEarned > 0) {
                 const { error: pointsError } = await supabase
                     .from('profiles')
                     .update({ points: (profile?.points || 0) + pointsEarned })
@@ -244,18 +233,19 @@ export default function DashboardPage() {
                             points: prev.points + pointsEarned
                         }
                     })
-                    alert(`Uploaded successfully! You earned ${pointsEarned} points! 🎉`)
+                    showToast(`You earned ${pointsEarned} points! 🎉`, 'success')
                 }
             } else {
-                alert('Uploaded successfully! No points awarded due to audio length mismatch (too short or too long for script).')
+                showToast('Uploaded successfully!', 'success')
             }
+
 
             setUploading(false)
             // window.location.reload() // Optional: reload to refresh list
 
         } catch (err) {
             console.error('Unexpected error:', err)
-            alert('An unexpected error occurred')
+            showToast('An unexpected error occurred', 'error')
             setUploading(false)
         }
     }
@@ -298,6 +288,12 @@ export default function DashboardPage() {
                         <span className="ml-3 text-2xl font-bold text-white">{profile?.points || 0}</span>
                     </div>
                     <button
+                        onClick={() => router.push(`/${lang}/dashboard/settings`)}
+                        className="px-4 py-2 rounded-md bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+                    >
+                        {isAr ? 'الإعدادات' : 'Settings'}
+                    </button>
+                    <button
                         onClick={handleLogout}
                         className="px-4 py-2 rounded-md bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
                     >
@@ -308,8 +304,11 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Active Script Card */}
-                <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-900/50 to-purple-900/50 border border-white/10 backdrop-blur-xl">
-                    <span className="text-xs font-semibold text-indigo-300 uppercase tracking-widest mb-4 block">Current Script</span>
+                <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-900/50 to-purple-900/50 border border-white/10 backdrop-blur-xl relative">
+                    <span className="text-xs font-semibold text-indigo-300 uppercase tracking-widest mb-2 block">Current Script</span>
+                    {currentScript?.title && (
+                        <h2 className="text-xl font-bold text-white mb-4">{currentScript.title}</h2>
+                    )}
                     <p className="text-2xl md:text-3xl leading-relaxed text-white font-serif">
                         {currentScript ? currentScript.content_ar : 'Loading script...'}
                     </p>
@@ -353,6 +352,21 @@ export default function DashboardPage() {
                     {uploading && <p className="mt-4 text-indigo-400 animate-pulse">Uploading...</p>}
                 </div>
             </div>
+
+            {/* Toast Notification */}
+            {toast.show && (
+                <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 animate-bounce-in">
+                    <div className={`px-6 py-3 rounded-full shadow-2xl backdrop-blur-md border border-white/10 flex items-center gap-2 ${toast.type === 'success'
+                        ? 'bg-green-500/20 text-green-200 border-green-500/30'
+                        : toast.type === 'error'
+                            ? 'bg-red-500/20 text-red-200 border-red-500/30'
+                            : 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30'
+                        }`}>
+                        {toast.type === 'success' && <span className="text-xl">🎉</span>}
+                        <span className="font-bold">{toast.message}</span>
+                    </div>
+                </div>
+            )}
 
             {/* Recordings List */}
             {user && <RecordingsList userId={user.id} lang={lang} />}

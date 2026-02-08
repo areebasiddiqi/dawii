@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/client'
 import VoiceRecorder from '@/components/voice-recorder'
 import RecordingsList from '@/components/recordings-list'
+import UserStats from '@/components/user-stats'
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 
@@ -301,6 +302,9 @@ export default function DashboardPage() {
                     </button>
                 </div>
             </header>
+
+            {/* User Stats Section */}
+            {user && <UserStats userId={user.id} lang={lang} />}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Active Script Card */}

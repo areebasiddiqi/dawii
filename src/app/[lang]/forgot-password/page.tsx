@@ -1,47 +1,42 @@
 'use client'
 
-import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter, useParams } from 'next/navigation'
 import { useState } from 'react'
+import { useParams } from 'next/navigation'
+import Link from 'next/link'
 
-export default function LoginPage() {
+export default function ForgotPassword() {
     const params = useParams()
     const lang = params.lang as string
-    const router = useRouter()
     const supabase = createClient()
     const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleReset = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
-        setError(null)
+        setMessage(null)
 
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/auth/callback?next=/${lang}/reset-password`,
         })
 
         if (error) {
-            setError(error.message)
-            setLoading(false)
+            setMessage({ type: 'error', text: error.message })
         } else {
-            router.push(`/${lang}/dashboard`)
-            router.refresh()
+            setMessage({ type: 'success', text: 'Check your email for the password reset link' })
         }
+        setLoading(false)
     }
 
     const isAr = lang === 'ar'
     const t = {
-        title: isAr ? 'تسجيل الدخول' : 'Login',
+        title: isAr ? 'نسيت كلمة المرور' : 'Forgot Password',
+        description: isAr ? 'أدخل بريدك الإلكتروني لاستلام رابط إعادة تعيين كلمة المرور' : 'Enter your email to receive a password reset link',
         email: isAr ? 'البريد الإلكتروني' : 'Email',
-        password: isAr ? 'كلمة المرور' : 'Password',
-        submit: isAr ? 'دخول' : 'Sign In',
-        noAccount: isAr ? 'ليس لديك حساب؟' : "Don't have an account?",
-        signup: isAr ? 'سجل الآن' : 'Sign up',
+        submit: isAr ? 'إرسال رابط إعادة التعيين' : 'Send Reset Link',
+        backToLogin: isAr ? 'العودة لتسجيل الدخول' : 'Back to Login',
     }
 
     return (
@@ -50,10 +45,13 @@ export default function LoginPage() {
                 <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-white">
                     {t.title}
                 </h2>
+                <p className="mt-2 text-center text-sm text-gray-400">
+                    {t.description}
+                </p>
             </div>
 
             <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-                <form className="space-y-6" onSubmit={handleLogin}>
+                <form className="space-y-6" onSubmit={handleReset}>
                     <div>
                         <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-200">
                             {t.email}
@@ -71,31 +69,11 @@ export default function LoginPage() {
                         </div>
                     </div>
 
-                    <div>
-                        <div className="flex items-center justify-between">
-                            <label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-200">
-                                {t.password}
-                            </label>
-                            <div className="text-sm">
-                                <Link href={`/${lang}/forgot-password`} className="font-semibold text-indigo-400 hover:text-indigo-300">
-                                    {isAr ? 'نسيت كلمة المرور؟' : 'Forgot password?'}
-                                </Link>
-                            </div>
+                    {message && (
+                        <div className={`p-4 rounded-md ${message.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            <p className="text-sm">{message.text}</p>
                         </div>
-                        <div className="mt-2">
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                required
-                                className="block w-full rounded-md border-0 bg-white/5 py-1.5 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6 pl-2"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
+                    )}
 
                     <div>
                         <button
@@ -109,9 +87,8 @@ export default function LoginPage() {
                 </form>
 
                 <p className="mt-10 text-center text-sm text-gray-400">
-                    {t.noAccount}{' '}
-                    <Link href={`/${lang}/signup`} className="font-semibold leading-6 text-indigo-400 hover:text-indigo-300">
-                        {t.signup}
+                    <Link href={`/${lang}/login`} className="font-semibold leading-6 text-indigo-400 hover:text-indigo-300">
+                        {t.backToLogin}
                     </Link>
                 </p>
             </div>

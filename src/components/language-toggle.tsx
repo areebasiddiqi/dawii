@@ -21,6 +21,7 @@ export default function LanguageToggle({ className = '' }: { className?: string 
     return (
         <Link
             href={href}
+            dir="ltr"
             role="switch"
             aria-checked={isAr}
             aria-label="Toggle language"

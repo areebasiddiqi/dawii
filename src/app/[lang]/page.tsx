@@ -5,6 +5,7 @@ import { Mic, Zap, Shield, Globe, ArrowRight, Play, CheckCircle2, Star, User } f
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import LanguageToggle from '@/components/language-toggle'
 
 export default function LandingPage() {
     const params = useParams()
@@ -94,19 +95,7 @@ export default function LandingPage() {
 
                     </nav>
                     <div className="flex items-center gap-4">
-                        <Link
-                            href={isAr ? '/en' : '/ar'}
-                            role="switch"
-                            aria-checked={isAr}
-                            aria-label="Toggle language"
-                            className="relative inline-flex items-center h-8 w-16 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
-                        >
-                            <span
-                                className={`absolute top-0.5 h-7 w-7 rounded-full bg-indigo-600 shadow transition-transform duration-200 ${isAr ? 'translate-x-8' : 'translate-x-0.5'}`}
-                            />
-                            <span className={`relative z-10 flex-1 text-center text-xs font-semibold transition-colors ${!isAr ? 'text-white' : 'text-gray-400'}`}>EN</span>
-                            <span className={`relative z-10 flex-1 text-center text-xs font-semibold transition-colors ${isAr ? 'text-white' : 'text-gray-400'}`}>ع</span>
-                        </Link>
+                        <LanguageToggle />
                         {!loading && !isAuthenticated && (
                             <Link href={`/${lang}/login`} className="text-sm font-medium hover:text-indigo-400 transition-colors">
                                 {t.login}

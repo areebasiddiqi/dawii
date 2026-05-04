@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/client'
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import LanguageToggle from '@/components/language-toggle'
 
 export default function ResetPassword() {
     const params = useParams()
@@ -50,6 +51,9 @@ export default function ResetPassword() {
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center px-6 py-12 lg:px-8">
+            <div className="absolute top-6 right-6">
+                <LanguageToggle />
+            </div>
             <div className="sm:mx-auto sm:w-full sm:max-w-sm">
                 <h2 className="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-white">
                     {t.title}

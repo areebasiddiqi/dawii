@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/client'
 import VoiceRecorder from '@/components/voice-recorder'
 import RecordingsList from '@/components/recordings-list'
 import UserStats from '@/components/user-stats'
+import LanguageToggle from '@/components/language-toggle'
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 
@@ -288,6 +289,7 @@ export default function DashboardPage() {
                         <span className="text-gray-400 text-sm uppercase tracking-wider">{t.points}</span>
                         <span className="ml-3 text-2xl font-bold text-white">{profile?.points || 0}</span>
                     </div>
+                    <LanguageToggle />
                     <button
                         onClick={() => router.push(`/${lang}/dashboard/settings`)}
                         className="px-4 py-2 rounded-md bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"

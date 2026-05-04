@@ -4,6 +4,7 @@ import React from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Mic, Heart, Users, Globe, ArrowLeft } from 'lucide-react'
+import LanguageToggle from '@/components/language-toggle'
 
 export default function AboutPage() {
     const params = useParams()
@@ -38,10 +39,13 @@ export default function AboutPage() {
     return (
         <div className="min-h-screen bg-[#020617] text-white p-6 md:p-12 font-sans selection:bg-indigo-500/30">
             <div className="max-w-4xl mx-auto">
-                <Link href={`/${lang}`} className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 mb-12 transition-colors">
-                    <ArrowLeft className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} />
-                    {t.back}
-                </Link>
+                <div className="flex items-center justify-between mb-12">
+                    <Link href={`/${lang}`} className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors">
+                        <ArrowLeft className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} />
+                        {t.back}
+                    </Link>
+                    <LanguageToggle />
+                </div>
 
                 <header className="mb-20 text-center">
                     <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-600/20">

@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Save, ArrowLeft } from 'lucide-react'
+import LanguageToggle from '@/components/language-toggle'
 
 export default function SettingsPage() {
     const params = useParams()
@@ -126,13 +127,16 @@ export default function SettingsPage() {
     return (
         <div className="p-8 max-w-3xl mx-auto">
             <div className="mb-8">
-                <button
-                    onClick={() => router.push(`/${lang}/dashboard`)}
-                    className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors mb-4"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                    {t.back}
-                </button>
+                <div className="flex items-center justify-between mb-4">
+                    <button
+                        onClick={() => router.push(`/${lang}/dashboard`)}
+                        className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 transition-colors"
+                    >
+                        <ArrowLeft className={`w-4 h-4 ${isAr ? 'rotate-180' : ''}`} />
+                        {t.back}
+                    </button>
+                    <LanguageToggle />
+                </div>
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-indigo-400">
                     {t.title}
                 </h1>

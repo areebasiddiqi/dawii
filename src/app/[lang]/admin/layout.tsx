@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import LanguageToggle from '@/components/language-toggle'
 
 export default function AdminLayout({
     children,
@@ -53,7 +54,8 @@ export default function AdminLayout({
                     <Link href={`/${lang}/admin/scripts`} className="px-4 py-2 hover:bg-white/5 rounded">Scripts</Link>
                     <Link href={`/${lang}/admin/recordings`} className="px-4 py-2 hover:bg-white/5 rounded">Recordings</Link>
                 </nav>
-                <div className="mt-auto">
+                <div className="mt-auto flex flex-col gap-4">
+                    <LanguageToggle />
                     <Link href={`/${lang}/dashboard`} className="text-sm text-gray-400 hover:text-white">← User View</Link>
                 </div>
             </aside>

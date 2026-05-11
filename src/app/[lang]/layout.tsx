@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Cairo } from 'next/font/google'
+import { Inter, Cairo, Outfit } from 'next/font/google'
 import '@/app/globals.css'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +11,11 @@ const inter = Inter({
 const cairo = Cairo({
     subsets: ['arabic'],
     variable: '--font-cairo',
+    display: 'swap',
+})
+const outfit = Outfit({
+    subsets: ['latin'],
+    variable: '--font-outfit',
     display: 'swap',
 })
 
@@ -35,7 +40,7 @@ export default async function RootLayout({
 
     return (
         <html lang={lang} dir={dir}>
-            <body className={cn(inter.variable, cairo.variable, "font-sans antialiased")}>
+            <body className={cn(inter.variable, cairo.variable, outfit.variable, "font-sans antialiased")}>
                 {children}
             </body>
         </html>

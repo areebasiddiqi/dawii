@@ -72,3 +72,23 @@
     background-color: hsl(224 71% 4%);
   }
 }
+
+@layer utilities {
+  .glass-header {
+    background-color: rgba(2, 6, 23, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-card {
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .font-outfit {
+    font-family: var(--font-outfit), system-ui, sans-serif;
+  }
+}
